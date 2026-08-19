@@ -1,0 +1,11 @@
+========================================================================
+                       PROJECT INFORMATION CARD
+========================================================================
+Project Name : JA_Symlink
+Version      : 1.0.0
+Tech Stack   : Flutter 3.x / Dart 3.x
+Managed By   : JA Auto Git
+Website      : https://jatechvn.github.io/
+------------------------------------------------------------------------
+Description  : Windows Desktop app for managing directory symbolic links with GUI
+========================================================================
