@@ -1,0 +1,11 @@
+========================================================================
+                       PROJECT INFORMATION CARD
+========================================================================
+Project Name : JA Symlink Manager
+Version      : 1.0.1
+Tech Stack   : Flutter 3.x / Dart 3.x / Windows Native FFI
+Managed By   : JA Auto Git
+Website      : https://jatechvn.github.io/
+------------------------------------------------------------------------
+Description  : Professional Windows symbolic link manager with safe copy-before-delete operations, crash recovery, and multilingual UI.
+========================================================================
