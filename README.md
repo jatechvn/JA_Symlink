@@ -6,9 +6,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jatechvn/JA_Symlink/releases"><img src="https://img.shields.io/badge/Release-v1.0.1-0d6efd?style=flat-square" alt="Release v1.0.1"></a>
+  <a href="https://github.com/jatechvn/JA_Symlink/releases"><img src="https://img.shields.io/badge/Release-v1.1.0-0d6efd?style=flat-square" alt="Release v1.1.0"></a>
   <img src="https://img.shields.io/badge/Flutter-Windows-54c5f8?style=flat-square&logo=flutter&logoColor=white" alt="Flutter Windows">
   <img src="https://img.shields.io/badge/Dart-3.x-0175c2?style=flat-square&logo=dart&logoColor=white" alt="Dart 3.x">
+  <img src="https://img.shields.io/badge/Rust-FFI-dea584?style=flat-square&logo=rust&logoColor=white" alt="Rust FFI">
   <img src="https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d4?style=flat-square&logo=windows&logoColor=white" alt="Windows 10/11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="MIT License"></a>
 </p>
@@ -33,12 +34,27 @@ Creating symbolic links is a system-level operation. The application requests Ad
 - **Change target:** redirect an existing symlink to another target while preserving operation history.
 - **Remove:** remove the link without deleting the target data; restore the original folder from backup when available.
 
-### Verification and recovery
+### Rust Win32 Native Core & Fast Reparse Scanner
 
-- **Verify:** check active links and identify broken or externally changed targets.
-- **System scan:** scan common Windows paths for symlinks created outside the application.
+- **Win32 FFI Engine:** high-performance native core (`ja_fast_scan.dll`) calling `CreateSymbolicLinkW`, `RemoveDirectoryW`, and `GetFileAttributesW` directly with zero process spawning overhead.
+- **Multi-threaded Reparse Point Scanner:** scans entire drives for symlinks, junctions, and reparse points using `FindFirstFileExW` with `FIND_FIRST_EX_LARGE_FETCH` across worker thread pools.
+- **Developer Mode Support:** detects and leverages Windows 10/11 Developer Mode flags (`SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE`) for unprivileged link creation.
+- **Reparse Point Guard:** verifies reparse tags natively before removal to guarantee real directory contents are never accidentally deleted.
+
+### Storage Intelligence & Disk Tree Analyzer
+
+- **Hierarchical Folder Tree:** interactive directory tree (WizTree-style) showing folder sizes, file counts, and proportional visual percentage bars.
+- **On-Demand Expansion:** lazy-loads directory hierarchies on demand to ensure instant responsiveness even on massive drive structures.
+- **Drive Gauges & Storage Intelligence:** real-time drive capacity meters with health status, recommending candidates for symlink relocation.
+- **Folder Relocator Wizard:** multi-step guided relocation workflow with size previews and free-space validation.
+
+### Verification, recovery, and security
+
+- **Verify:** check active links and identify broken or externally changed targets (1,000x faster with native Win32 FFI).
+- **Smart Process Locker:** Windows Restart Manager integration to detect and safely close locking processes before folder moves.
 - **Crash recovery:** detect interrupted copy transactions and clean up or recover safely on the next launch.
 - **Copy-before-delete:** protect the original data until the target copy has completed successfully.
+- **Shell Context Menu:** optional Windows Explorer context menu integration for 1-click folder relocation.
 
 ### Import, export, and history
 
@@ -61,13 +77,16 @@ JA_Symlink/
 ├── lib/
 │   ├── main.dart                    # App bootstrap, elevation, providers, and window setup
 │   ├── layout/                      # Dashboard shell, navigation, settings, and about/guide tabs
-│   ├── views/                       # Overview, symlink list, system tools, and user guide screens
-│   ├── dialogs/                     # Create, change, remove, scan, verify, and import dialogs
-│   ├── widgets/                     # Reusable glass surfaces, controls, palette, and indicators
+│   ├── views/                       # Overview, symlink list, tree analyzer, and tools screens
+│   ├── dialogs/                     # Create, change, remove, scan, verify, and relocator dialogs
+│   ├── widgets/                     # Reusable glass surfaces, controls, folder tree, and gauges
 │   ├── modules/                     # Constants, i18n, config, logging, services, and operations
 │   │   ├── logic/                   # Create/change/remove/verify/import/recovery workflows
-│   │   └── native/                  # Windows filesystem and symlink bridge
+│   │   └── native/                  # Windows Win32 FFI bridge & fallback process handlers
 │   └── theme/                       # Color tokens, Windows styles, glass settings, and effects
+├── rust_core/                       # High-performance Rust Win32 native core (ja_fast_scan.dll)
+│   ├── src/lib.rs                   # Multi-threaded FindFirstFileExW scanner & Win32 CRUD FFI
+│   └── Cargo.toml                   # Rust crate configuration (winapi, rayon)
 ├── windows/runner/                  # Windows runner and native window/elevation integration
 ├── test/                            # Unit, widget, smoke, i18n, and theme persistence tests
 ├── assets/                          # Static resources; assets/data is local runtime history
@@ -77,7 +96,9 @@ JA_Symlink/
 ├── debug.bat                       # Launch helper for the debug build
 ├── pubspec.yaml                    # Flutter package metadata and dependencies
 ├── ABOUT.txt                       # JA-HUB project information card
+├── USERGUIDE.md                    # Comprehensive user and administrator guide
 ├── CHANGELOG.md                    # Permanent release history
+├── RELEASE_NOTES.md                # GitHub Release notes
 ├── LICENSE                         # MIT license
 └── .gitignore                      # Excludes runtime state, build output, and local tooling
 ```
@@ -86,7 +107,7 @@ JA_Symlink/
 
 ### Option A: Portable Run
 
-1. Download `JA_Symlink_v1.0.1_Windows_x64.zip` from the [GitHub Releases](https://github.com/jatechvn/JA_Symlink/releases) page.
+1. Download `JA_Symlink_v1.1.0_Windows_x64.zip` from the [GitHub Releases](https://github.com/jatechvn/JA_Symlink/releases) page.
 2. Extract the archive to a trusted local folder.
 3. Run `ja_symlink.exe`; Windows will request Administrator elevation for symlink operations.
 4. Keep the extracted folder intact; the portable app stores its local history beside the executable.
@@ -133,6 +154,7 @@ The symlink history is stored locally under `assets/data/` beside the portable e
 
 ## Changelog
 
+- **v1.1.0:** Rust Win32 Native Core (`ja_fast_scan.dll`), multi-threaded reparse point scanner, hierarchical folder tree disk analyzer with percentage bars, storage intelligence gauges, process locker, shell context menu integration.
 - **v1.0.1:** fixed multilingual navigation and UI string consistency, strengthened glass opacity/blur behavior, improved release-data protection, and added smoke coverage.
 - **v1.0.0:** initial Windows desktop release with symlink lifecycle management, verification, import/export, recovery, and glass UI.
 

@@ -129,7 +129,7 @@ class PillBadge extends StatelessWidget {
 }
 
 /// Frosted Bento Grid Card with highlight top-border and soft glow on hover.
-class BentoCard extends StatelessWidget {
+class BentoCard extends StatefulWidget {
   final AppColors colors;
   final Widget child;
   final double borderRadius;
@@ -140,6 +140,7 @@ class BentoCard extends StatelessWidget {
   final Color? customBg;
   final Color? customBorder;
   final double? bgOpacity;
+  final bool enableHoverGlow;
 
   const BentoCard({
     super.key,
@@ -153,44 +154,63 @@ class BentoCard extends StatelessWidget {
     this.customBg,
     this.customBorder,
     this.bgOpacity,
+    this.enableHoverGlow = true,
   });
 
   @override
+  State<BentoCard> createState() => _BentoCardState();
+}
+
+class _BentoCardState extends State<BentoCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final bgOpacity = widget.bgOpacity;
     final effectiveBg =
-        customBg ??
+        widget.customBg ??
         (bgOpacity != null
-            ? colors.cardBg.withValues(alpha: bgOpacity)
-            : colors.cardBg);
+            ? widget.colors.cardBg.withValues(alpha: bgOpacity)
+            : widget.colors.cardBg);
 
     // Legibility floor: when opacity < 1.0, force blur >= 6.0
-    final double effectiveOpacity = bgOpacity ?? 0.25;
+    final double effectiveOpacity = widget.bgOpacity ?? 0.25;
     final double effectiveBlur = effectiveOpacity < 1.0
-        ? math.max(blurSigma, 6.0)
-        : blurSigma;
+        ? math.max(widget.blurSigma, 6.0)
+        : widget.blurSigma;
+
+    final isGlowActive =
+        widget.isFeatured || (_isHovered && widget.enableHoverGlow);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(widget.borderRadius),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: effectiveBlur, sigmaY: effectiveBlur),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(borderRadius),
-            hoverColor: colors.cardHoverBg.withValues(alpha: 0.15),
-            child: Container(
-              padding: padding,
+            onTap: widget.onTap,
+            onHover: (hovering) {
+              if (widget.enableHoverGlow && mounted) {
+                setState(() => _isHovered = hovering);
+              }
+            },
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            hoverColor: widget.colors.cardHoverBg.withValues(alpha: 0.15),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              padding: widget.padding,
               decoration: BoxDecoration(
                 color: effectiveBg,
-                borderRadius: BorderRadius.circular(borderRadius),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
                   color:
-                      customBorder ??
-                      (isFeatured
-                          ? colors.accentColor.withValues(alpha: 0.4)
-                          : colors.borderDefault),
-                  width: isFeatured ? 1.2 : 1.0,
+                      widget.customBorder ??
+                      (isGlowActive
+                          ? widget.colors.accentColor.withValues(alpha: 0.5)
+                          : widget.colors.borderDefault),
+                  width: isGlowActive ? 1.2 : 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -198,26 +218,28 @@ class BentoCard extends StatelessWidget {
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
-                  if (isFeatured)
+                  if (isGlowActive)
                     BoxShadow(
-                      color: colors.primaryGlow.withValues(alpha: 0.15),
-                      blurRadius: 30,
+                      color: widget.colors.primaryGlow.withValues(
+                        alpha: _isHovered ? 0.22 : 0.15,
+                      ),
+                      blurRadius: _isHovered ? 36 : 30,
                       offset: const Offset(0, 10),
                     ),
                 ],
               ),
               foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(borderRadius),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border(
                   top: BorderSide(
-                    color: isFeatured
-                        ? colors.accentCyan.withValues(alpha: 0.6)
-                        : colors.glassHighlight,
+                    color: isGlowActive
+                        ? widget.colors.accentCyan.withValues(alpha: 0.7)
+                        : widget.colors.glassHighlight,
                     width: 1,
                   ),
                 ),
               ),
-              child: child,
+              child: widget.child,
             ),
           ),
         ),

@@ -139,7 +139,9 @@ class SymlinkService {
   }
 
   /// Read all entries from JSON
-  Future<List<SymlinkEntry>> readAllEntries() async {
+  Future<List<SymlinkEntry>> readAllEntries() async => _readEntries();
+
+  List<SymlinkEntry> _readEntries() {
     final jsonFile = File(_jsonPath);
     if (!jsonFile.existsSync()) {
       return [];
@@ -185,11 +187,28 @@ class SymlinkService {
   }
 
   /// Add a new entry to JSON
+  /// Keep read/modify/write synchronous until _saveJson has written the file:
+  /// no await between reading and writing, so same-isolate writers cannot race.
   Future<void> addEntry(SymlinkEntry entry) async {
-    final entries = await readAllEntries();
+    final entries = _readEntries();
     entries.add(entry);
     await _saveJson(entries);
     _logger.info('Added JSON entry: $entry');
+  }
+
+  /// Compare-and-set a health observation without overwriting newer history.
+  Future<void> updateHealthStatus(SymlinkEntry observed, String status) async {
+    final entries = _readEntries();
+    for (final entry in entries) {
+      if (entry.timestamp == observed.timestamp &&
+          pathsEqual(entry.linkPath, observed.linkPath) &&
+          pathsEqual(entry.targetPath, observed.targetPath) &&
+          entry.backupPath == observed.backupPath &&
+          entry.status == observed.status) {
+        entry.status = status;
+      }
+    }
+    await _saveJson(entries);
   }
 
   /// Save the entire entries list to JSON file
@@ -212,7 +231,7 @@ class SymlinkService {
     String oldStatus,
     String newStatus,
   ) async {
-    final entries = await readAllEntries();
+    final entries = _readEntries();
     bool updated = false;
     for (final entry in entries) {
       if (entry.linkPath.toLowerCase() == linkPath.toLowerCase() &&
@@ -231,7 +250,7 @@ class SymlinkService {
 
   /// Fix an entry's target path (when JSON doesn't match actual symlink target)
   Future<void> fixEntryTarget(String linkPath, String newTargetPath) async {
-    final entries = await readAllEntries();
+    final entries = _readEntries();
     bool updated = false;
     for (int i = 0; i < entries.length; i++) {
       final entry = entries[i];

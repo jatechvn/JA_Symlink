@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../modules/i18n.dart';
 import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
 import 'glass_widgets.dart';
@@ -67,7 +68,6 @@ class _CommandPaletteState extends State<CommandPalette> {
   Widget build(BuildContext context) {
     final c = widget.colors;
     final theme = context.watch<ThemeProvider>();
-    final s = context.strings;
     final effectiveBlur = theme.dialogOpacity < 1.0
         ? math.max(theme.dialogBlur, 6.0)
         : theme.dialogBlur;
@@ -124,6 +124,7 @@ class _CommandPaletteCard extends StatelessWidget {
     final bg = theme.isDark
         ? const Color(0xFF0F172A).withValues(alpha: theme.dialogOpacity)
         : const Color(0xFFFFFFFF).withValues(alpha: theme.dialogOpacity);
+    final s = context.strings;
 
     return Shortcuts(
       shortcuts: {

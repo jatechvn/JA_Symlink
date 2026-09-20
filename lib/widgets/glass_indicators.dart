@@ -238,8 +238,8 @@ class _SlidingPillTabBarState extends State<SlidingPillTabBar> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final isWideScreen = screenWidth >= 1150 || constraints.maxWidth >= 720;
+        final requiredExpandedWidth = widget.tabs.length * 105.0;
+        final isWideScreen = constraints.maxWidth >= requiredExpandedWidth;
         final shouldCollapse = widget.adaptiveCollapse && !isWideScreen;
 
         return Container(
@@ -256,180 +256,183 @@ class _SlidingPillTabBarState extends State<SlidingPillTabBar> {
               ),
             ],
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(widget.tabs.length, (index) {
-                final isSelected = widget.currentIndex == index;
-                final isHovered = _hoveredIndex == index;
-                final showLabel = isSelected || isHovered || !shouldCollapse;
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(widget.tabs.length, (index) {
+                  final isSelected = widget.currentIndex == index;
+                  final isHovered = _hoveredIndex == index;
+                  final showLabel = isSelected || isHovered || !shouldCollapse;
 
-                final decoration = isSelected
-                    ? BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            widget.colors.accentColor,
-                            widget.colors.accentCyan.withValues(alpha: 0.88),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(100),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: widget.colors.primaryGlow.withValues(
-                              alpha: 0.45,
-                            ),
-                            blurRadius: 14,
-                            offset: const Offset(0, 3),
+                  final decoration = isSelected
+                      ? BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              widget.colors.accentColor,
+                              widget.colors.accentCyan.withValues(alpha: 0.88),
+                            ],
                           ),
-                        ],
-                      )
-                    : (isHovered
-                          ? BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: const Alignment(-0.8, -1.0),
-                                end: const Alignment(0.8, 1.0),
-                                colors: [
-                                  widget.colors.glassHighlight.withValues(
-                                    alpha: 0.32,
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.colors.primaryGlow.withValues(
+                                alpha: 0.45,
+                              ),
+                              blurRadius: 14,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        )
+                      : (isHovered
+                            ? BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: const Alignment(-0.8, -1.0),
+                                  end: const Alignment(0.8, 1.0),
+                                  colors: [
+                                    widget.colors.glassHighlight.withValues(
+                                      alpha: 0.32,
+                                    ),
+                                    widget.colors.cardHoverBg.withValues(
+                                      alpha: 0.65,
+                                    ),
+                                    widget.colors.glassHighlight.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(100),
+                                border: Border.all(
+                                  color: widget.colors.accentColor.withValues(
+                                    alpha: 0.45,
                                   ),
-                                  widget.colors.cardHoverBg.withValues(
-                                    alpha: 0.65,
+                                  width: 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: widget.colors.accentColor.withValues(
+                                      alpha: 0.16,
+                                    ),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
                                   ),
-                                  widget.colors.glassHighlight.withValues(
-                                    alpha: 0.08,
+                                  BoxShadow(
+                                    color: widget.colors.glassHighlight
+                                        .withValues(alpha: 0.30),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, -1),
                                   ),
                                 ],
-                              ),
-                              borderRadius: BorderRadius.circular(100),
-                              border: Border.all(
-                                color: widget.colors.accentColor.withValues(
-                                  alpha: 0.45,
+                              )
+                            : const BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(100),
                                 ),
-                                width: 1.0,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: widget.colors.accentColor.withValues(
-                                    alpha: 0.16,
+                              ));
+
+                  final foregroundDeco = isSelected
+                      ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border(
+                            top: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              width: 1.2,
+                            ),
+                          ),
+                        )
+                      : (isHovered
+                            ? BoxDecoration(
+                                borderRadius: BorderRadius.circular(100),
+                                border: Border(
+                                  top: BorderSide(
+                                    color: widget.colors.glassHighlight
+                                        .withValues(alpha: 0.95),
+                                    width: 1.2,
                                   ),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
                                 ),
-                                BoxShadow(
-                                  color: widget.colors.glassHighlight
-                                      .withValues(alpha: 0.30),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, -1),
+                              )
+                            : null);
+
+                  return MouseRegion(
+                    onEnter: (_) => setState(() => _hoveredIndex = index),
+                    onExit: (_) => setState(() => _hoveredIndex = null),
+                    child: Tooltip(
+                      message: widget.tabs[index],
+                      waitDuration: const Duration(milliseconds: 600),
+                      child: GestureDetector(
+                        onTap: () => widget.onTabSelected(index),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: showLabel ? 12 : 9,
+                            vertical: 5.5,
+                          ),
+                          decoration: decoration,
+                          foregroundDecoration: foregroundDeco,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                widget.icons[index],
+                                size: 14.5,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isHovered
+                                          ? widget.colors.textPrimary
+                                          : widget.colors.textSecondary),
+                              ),
+                              if (showLabel) ...[
+                                const SizedBox(width: 5.5),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: isWideScreen ? 145 : 115,
+                                  ),
+                                  child: isSelected
+                                      ? AsymmetricMarqueeText(
+                                          text: widget.tabs[index],
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        )
+                                      : Text(
+                                          widget.tabs[index],
+                                          style: TextStyle(
+                                            color: isHovered
+                                                ? widget.colors.textPrimary
+                                                : widget.colors.textSecondary,
+                                            fontSize: 12,
+                                            fontWeight: isHovered
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                            letterSpacing: 0.2,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                 ),
                               ],
-                            )
-                          : const BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(100),
-                              ),
-                            ));
-
-                final foregroundDeco = isSelected
-                    ? BoxDecoration(
-                        borderRadius: BorderRadius.circular(100),
-                        border: Border(
-                          top: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            width: 1.2,
-                          ),
-                        ),
-                      )
-                    : (isHovered
-                          ? BoxDecoration(
-                              borderRadius: BorderRadius.circular(100),
-                              border: Border(
-                                top: BorderSide(
-                                  color: widget.colors.glassHighlight
-                                      .withValues(alpha: 0.95),
-                                  width: 1.2,
-                                ),
-                              ),
-                            )
-                          : null);
-
-                return MouseRegion(
-                  onEnter: (_) => setState(() => _hoveredIndex = index),
-                  onExit: (_) => setState(() => _hoveredIndex = null),
-                  child: Tooltip(
-                    message: widget.tabs[index],
-                    waitDuration: const Duration(milliseconds: 600),
-                    child: GestureDetector(
-                      onTap: () => widget.onTabSelected(index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: showLabel ? 12 : 9,
-                          vertical: 5.5,
-                        ),
-                        decoration: decoration,
-                        foregroundDecoration: foregroundDeco,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.icons[index],
-                              size: 14.5,
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isHovered
-                                        ? widget.colors.textPrimary
-                                        : widget.colors.textSecondary),
-                            ),
-                            if (showLabel) ...[
-                              const SizedBox(width: 5.5),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: isWideScreen ? 145 : 115,
-                                ),
-                                child: isSelected
-                                    ? AsymmetricMarqueeText(
-                                        text: widget.tabs[index],
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      )
-                                    : Text(
-                                        widget.tabs[index],
-                                        style: TextStyle(
-                                          color: isHovered
-                                              ? widget.colors.textPrimary
-                                              : widget.colors.textSecondary,
-                                          fontSize: 12,
-                                          fontWeight: isHovered
-                                              ? FontWeight.w700
-                                              : FontWeight.w600,
-                                          letterSpacing: 0.2,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                              ),
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
         );

@@ -492,9 +492,280 @@ class AppStrings {
 
   // ── Shared navigation and UI labels ──────────
   String get navOverview => _s('Overview', '概览', 'Tổng quan');
+  String get navRelocator => _s('Free Up C:', '释放C盘', 'Dọn Ổ C');
   String get navSymlinks => _s('Symlinks', '符号链接', 'Danh sách');
+  String get navFastScan => _s('Fast Scan', '极速分析', 'Quét nhanh');
   String get navTools => _s('Tools', '工具', 'Công cụ');
   String get navGuide => _s('User Guide', '用户指南', 'Hướng dẫn');
+
+  // ── 1-Click Relocator & Health Watcher Strings ──
+  String get relocatorTitle =>
+      _s('1-Click Smart Relocator', '一键智能转移', 'Di dời Ổ C Thông minh');
+  String get relocatorSubtitle => _s(
+    'Scan and safely relocate heavy cache, AI model, and SDK folders from C: to secondary drives',
+    '扫描并安全地将 C 盘庞大的缓存、AI 模型和 SDK 目录转移至其他磁盘',
+    'Tự động quét và di chuyển các thư mục cache, model AI và SDK khổng lồ sang ổ đĩa khác an toàn',
+  );
+  String get targetDriveLabel =>
+      _s('Target Destination Drive:', '目标磁盘:', 'Ổ đĩa đích mặc định:');
+  String get btnRelocate => _s('Relocate to', '转移至', 'Di dời sang');
+  String get alreadySymlinked => _s(
+    'Linked (Active Symlink)',
+    '已链接 (Symlink 活跃)',
+    'Đã liên kết (Symlink hoạt động)',
+  );
+  String get notFound =>
+      _s('Not Detected / Empty', '未安装 / 空目录', 'Chưa cài đặt / Trống');
+  String get btnScanAll => _s('Scan Presets', '扫描预设', 'Quét dung lượng');
+  String get healthWatcherTitle =>
+      _s('Live Health Watcher', '实时健康监控', 'Giám sát thời gian thực');
+  String get healthBrokenAlert => _s(
+    'Broken link detected',
+    '检测到断开的软链接',
+    'Phát hiện liên kết bị ngắt kết nối',
+  );
+  String get healthAllHealthy =>
+      _s('All links healthy', '所有链接正常', 'Mọi liên kết hoạt động tốt');
+  String get btnExportScript => _s(
+    'Export Standalone Script (.bat)',
+    '导出独立恢复脚本 (.bat)',
+    'Xuất script khôi phục độc lập (.bat)',
+  );
+  String get btnExportPsScript => _s(
+    'Export PowerShell Script (.ps1)',
+    '导出 PowerShell 脚本 (.ps1)',
+    'Xuất script PowerShell (.ps1)',
+  );
+  String get btnExportSnapshot =>
+      _s('Backup JSON Snapshot', '备份 JSON 快照', 'Sao lưu Snapshot JSON');
+  String get btnRestoreSnapshot =>
+      _s('Restore from Snapshot', '从快照恢复', 'Khôi phục từ Snapshot');
+  String get survivalKitTitle => _s(
+    'Windows Reinstall Survival Kit',
+    '重装系统急救箱',
+    'Cứu tinh khi Cài lại Windows',
+  );
+  String get survivalKitDesc => _s(
+    'Generate standalone scripts (.bat/.ps1) to instantly recreate all symlinks in 1-click on a fresh Windows install without GUI',
+    '生成独立脚本 (.bat/.ps1)，无需安装客户端即可在重装系统后一键重建所有符号链接',
+    'Tạo file script (.bat/.ps1) độc lập để tự động tái tạo toàn bộ symlink chỉ trong 1 click khi cài lại Windows',
+  );
+  String get msgExportScriptSuccess => _s(
+    'Recovery script exported successfully',
+    '独立恢复脚本已成功导出',
+    'Xuất script khôi phục thành công',
+  );
+  String get msgSnapshotExportSuccess => _s(
+    'Snapshot backup exported successfully',
+    '快照备份已成功导出',
+    'Xuất snapshot sao lưu thành công',
+  );
+  String snapshotRestoreSummaryMsg(int restored, int skipped, int failed) => _s(
+    'Snapshot restore completed:\n- $restored restored\n- $skipped skipped\n- $failed failed',
+    '快照恢复完成:\n- $restored 成功恢复\n- $skipped 已跳过\n- $failed 失败',
+    'Khôi phục snapshot hoàn tất:\n- $restored thành công\n- $skipped bỏ qua\n- $failed thất bại',
+  );
+
+  // ── Windows Context Menu & Process Locker Strings ──
+  String get shellContextMenuTitle => _s(
+    'Windows Explorer Context Menu',
+    'Windows 资源管理器右键菜单',
+    'Menu Chuột Phải Windows Explorer',
+  );
+  String get shellContextMenuDesc => _s(
+    'Right-click any folder or empty space in Windows Explorer to quickly select it as symlink source or destination',
+    '在资源管理器中右键任意文件夹或空白区域，可一键将其设为符号链接源或目标',
+    'Nhấp chuột phải vào thư mục hoặc vùng trống trong Windows Explorer để chọn nhanh làm nguồn hoặc đích symlink',
+  );
+  String get shellMenuRegistered =>
+      _s('Integrated (Active)', '已集成 (已激活)', 'Đã tích hợp (Hoạt động)');
+  String get shellMenuNotRegistered =>
+      _s('Not Integrated', '未集成', 'Chưa tích hợp');
+  String get shellMenuLabelSource => _s(
+    'Create Symlink (JA Symlink)',
+    '创建符号链接 (JA Symlink)',
+    'Tạo Symbolic Link (JA Symlink)',
+  );
+  String get shellMenuLabelTarget => _s(
+    'Set as Symlink Target Here (JA Symlink)',
+    '在此处设置为符号链接目标 (JA Symlink)',
+    'Đặt làm Đích Symlink tại đây (JA Symlink)',
+  );
+  String get btnRegisterShellMenu =>
+      _s('Enable Context Menu', '启用右键菜单', 'Bật Menu Chuột Phải');
+  String get btnUnregisterShellMenu =>
+      _s('Remove Context Menu', '移除右键菜单', 'Gỡ Menu Chuột Phải');
+  String get msgShellRegisterSuccess => _s(
+    'Explorer context menu registered successfully',
+    '资源管理器右键菜单已成功注册',
+    'Đã tích hợp menu chuột phải thành công',
+  );
+  String get msgShellUnregisterSuccess => _s(
+    'Explorer context menu removed successfully',
+    '资源管理器右键菜单已成功移除',
+    'Đã gỡ bỏ menu chuột phải thành công',
+  );
+  String get dlgProcessLockTitle => _s(
+    'Applications Locking Folder',
+    '检测到正在占用文件夹的应用',
+    'Phát Hiện Ứng Dụng Đang Khóa Thư Mục',
+  );
+  String get dlgProcessLockDesc => _s(
+    'The following applications are currently using or loading files from this folder. Terminate them to prevent access errors:',
+    '以下应用程序正在使用或锁定此目录中的文件。建议关闭它们以防止出现权限错误：',
+    'Các ứng dụng sau đang chạy hoặc mở tệp bên trong thư mục này. Bạn nên đóng chúng để tránh lỗi Access Denied:',
+  );
+  String get btnKillAndContinue =>
+      _s('Close Apps & Continue', '关闭应用并继续', 'Đóng ứng dụng & Tiếp tục');
+  String get btnIgnoreAndContinue =>
+      _s('Ignore & Continue', '忽略并继续', 'Bỏ qua & Tiếp tục');
+
+  // ── Live Drive Space Bar & Storage Savings Counter ──
+  String get driveSpaceTitle =>
+      _s('Live Drive Space', '磁盘实时容量', 'Dung Lượng Ổ Đĩa Thời Gian Thực');
+  String get driveSpaceSubtitle => _s(
+    'Real-time capacity and utilization for all connected drives',
+    '所有已连接磁盘的实时容量与使用状态监控',
+    'Theo dõi dung lượng và trạng thái sử dụng của toàn bộ ổ đĩa',
+  );
+  String get driveSystemBadge => _s('SYSTEM', '系统盘', 'HỆ THỐNG');
+  String get driveLocalBadge => _s('LOCAL', '本地盘', 'CỤC BỘ');
+  String get driveUsbBadge => _s('REMOVABLE', '移动磁盘', 'USB / DI ĐỘNG');
+  String get driveOpenExplorer =>
+      _s('Open in File Explorer', '在文件资源管理器中打开', 'Mở trong File Explorer');
+  String get driveRefreshTooltip =>
+      _s('Refresh drive telemetry', '刷新磁盘状态', 'Làm mới dung lượng ổ đĩa');
+  String driveFreeOfTotal(String free, String total) =>
+      _s('$free free of $total', '剩余 $free / 共 $total', '$free trống / $total');
+  String driveUsedPercent(String pct) =>
+      _s('$pct used', '已用 $pct', 'Đã dùng $pct');
+
+  String get storageSavingsTitle => _s(
+    'Redirected Data Estimate',
+    '重定向数据估算',
+    'Ước Tính Dữ Liệu Chuyển Hướng',
+  );
+  String get storageSavingsSubtitle => _s(
+    'Current target sizes; not a measurement of space previously freed',
+    '当前目标大小，并非历史释放空间的测量值',
+    'Kích thước target hiện tại; không phải số đo dung lượng từng được giải phóng',
+  );
+  String get storageSavedOnCLabel => _s(
+    'REDIRECTED FROM C: (EST.)',
+    '从 C 盘重定向（估算）:',
+    'CHUYỂN HƯỚNG TỪ C: (ƯỚC TÍNH)',
+  );
+  String totalOffloadedFiles(int count) => _s(
+    '$count redirected files',
+    '$count 个已转移文件',
+    '$count tệp tin đã điều hướng',
+  );
+  String get storageRelocateMore => _s(
+    'Free Up More with 1-Click Relocator',
+    '通过一键转移释放更多空间',
+    'Dọn thêm với 1-Click Relocator',
+  );
+  String get storageScanning => _s(
+    'Scanning storage sizes...',
+    '正在统计目录大小...',
+    'Đang tính toán dung lượng...',
+  );
+  String get savingsBreakdown =>
+      _s('Savings Breakdown by Drive', '目标磁盘分布', 'Phân bổ theo ổ đĩa đích');
+  String get storageOffloaded => _s('Offloaded', '已转移', 'Đã giải phóng');
+
+  // ── UI/UX Pro Max & Visualizations Strings ──
+  String get copiedToClipboard => _s('Copied!', '已复制!', 'Đã sao chép!');
+  String get storageDistributionTitle =>
+      _s('Data Distribution', '数据分布', 'Phân Bổ Dữ Liệu');
+  String get systemHealthTitle =>
+      _s('System Integrity', '系统完整性', 'Độ Toàn Vẹn Hệ Thống');
+  String get healthIssuesDetected =>
+      _s('Issues detected', '检测到异常', 'Phát hiện sự cố');
+  String get btnVerifyAndFix => _s('Check links', '检查链接', 'Kiểm tra liên kết');
+  String get copyFailed => _s(
+    'Copy failed. Try again.',
+    '复制失败，请重试。',
+    'Sao chép thất bại. Hãy thử lại.',
+  );
+  String get distributionEmpty =>
+      _s('No distribution data available', '暂无分布数据', 'Chưa có dữ liệu phân bổ');
+  String get distributionLinks => _s('LINKS', '链接', 'LIÊN KẾT');
+  String healthBrokenDetails(int count) => _s(
+    '$count broken links (drive disconnected or path moved)',
+    '$count 个链接断开（磁盘已断开或路径已移动）',
+    '$count liên kết bị ngắt (ổ đĩa rút ra hoặc đường dẫn bị dời)',
+  );
+  String healthTrackedDetails(int count) => _s(
+    '$count links tracked; use Check links to verify',
+    '跟踪 $count 个链接；请检查链接以验证',
+    'Đang theo dõi $count liên kết; bấm Kiểm tra để xác minh',
+  );
+  String get emptySymlinksTitle =>
+      _s('No Symbolic Links Yet', '暂无符号链接', 'Chưa Có Symbolic Link Nào');
+  String get emptySymlinksDesc => _s(
+    'Create your first symlink to redirect heavy folders and free up space on drive C:',
+    '创建您的第一个符号链接以转移繁重文件夹并释放 C 盘空间',
+    'Tạo liên kết đầu tiên để di dời các thư mục nặng và giải phóng ổ C:',
+  );
+  String get emptySearchResultsTitle =>
+      _s('No Matches Found', '未找到匹配项', 'Không Tìm Thấy Kết Quả');
+  String get emptySearchResultsDesc => _s(
+    'Try refining your search keyword or switching the status filter',
+    '尝试调整搜索关键词或切换状态筛选',
+    'Thử đổi từ khóa tìm kiếm hoặc chuyển bộ lọc trạng thái',
+  );
+  String get btnResetFilter => _s('Reset Filters', '重置筛选', 'Đặt lại bộ lọc');
+
+  // ── Fast Disk Analyzer Engine Strings ──
+  String get fastScanTitle =>
+      _s('Fast Disk Analyzer', '极速磁盘分析', 'Khảo Sát Ổ Đĩa Siêu Tốc');
+  String get fastScanSubtitle => _s(
+    'High-speed MFT & USN instant disk scan in seconds',
+    'MFT/USN 毫秒级极速全盘分析',
+    'Công nghệ quét trực tiếp NTFS MFT chỉ trong vài giây',
+  );
+  String get fastScanBtnStart =>
+      _s('Start Fast Scan', '开始极速扫描', 'Bắt Đầu Quét Siêu Tốc');
+  String get fastScanBtnScanning =>
+      _s('Scanning MFT...', '正在读取 MFT...', 'Đang Quét MFT...');
+  String get fastScanTopFolders => _s(
+    'Top Heaviest Folders',
+    '最大占用文件夹排行榜',
+    'Top Thư Mục Chiếm Nhiều Dung Lượng Nhất',
+  );
+  String get fastScanRelocateAction =>
+      _s('Relocate with Symlink', '转移并创建符号链接', 'Tạo Symlink Chuyển Ổ');
+  String get fastScanExploreAction =>
+      _s('Open in Explorer', '在资源管理器中打开', 'Mở trong Explorer');
+  String get fastScanEngineNative =>
+      _s('Native NTFS MFT Engine', '原生 NTFS MFT 引擎', 'Động Cơ Native MFT');
+  String get fastScanEngineFallback =>
+      _s('Multi-threaded Scan Engine', '多线程扫描引擎', 'Động Cơ Quét Đa Luồng');
+  String fastScanScannedSummary(int files, int dirs, String duration) => _s(
+    'Scanned $files files and $dirs directories in $duration',
+    '在 $duration 内扫描了 $files 个文件和 $dirs 个目录',
+    'Đã quét $files tệp tin và $dirs thư mục trong $duration',
+  );
+  String get fastScanEmptyNotice => _s(
+    'Select a drive above and click Start Scan to instantly analyze disk usage.',
+    '请在上方选择磁盘并点击开始扫描，以毫秒级分析磁盘占用。',
+    'Chọn một ổ đĩa phía trên và bấm Bắt đầu quét để khảo sát dung lượng trong tích tắc.',
+  );
+  String get fastScanFilterHint =>
+      _s('Filter scanned folders...', '筛选已扫描的文件夹...', 'Lọc thư mục đã quét...');
+  String get fastScanViewTree => _s('Folder Tree', '树形目录', 'Cây Thư Mục');
+  String get fastScanViewRanking =>
+      _s('Top Ranking', 'Top 排行', 'Bảng Xếp Hạng');
+  String get fastScanDirectFiles =>
+      _s('Files in this folder', '当前目录文件', 'Tệp trong thư mục này');
+  String get fastScanLoadingSubfolders =>
+      _s('Loading subfolders...', '正在加载子目录...', 'Đang đọc thư mục con...');
+  String get fastScanNoSubfolders =>
+      _s('No subfolders', '无子目录', 'Không có thư mục con');
+  String get fastScanExpandTooltip =>
+      _s('Click to expand subfolders', '点击展开子目录', 'Bấm để mở rộng thư mục con');
+
   String activeBadge(int n) => _s('$n ACTIVE', '$n 活动', '$n HOẠT ĐỘNG');
   String get standardShort => _s('STD', '标准', 'THƯỜNG');
   String get spotlightTooltip => _s(

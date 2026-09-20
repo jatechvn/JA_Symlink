@@ -58,3 +58,12 @@ license.key
 # Claude Code / Antigravity project-local tooling (skills, agent config, runtime locks)
 .claude/
 .agents/
+
+# Rust build artifacts
+rust_core/target/
+
+# Local testing and scratch files
+Snapshotted
+Snapshotted/
+ja_symlinks_export_*.json
+ja_fast_scan.dll

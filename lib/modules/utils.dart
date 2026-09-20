@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'native/win_core.dart';
 
 /// Format timestamp for CSV: yyyy-MM-dd_HH:mm:ss
 String formatTimestamp([DateTime? dt]) {
@@ -39,26 +40,12 @@ String formatTimestampFileName([DateTime? dt]) {
 
 /// Check if a path is a symlink (directory junction or symbolic link)
 Future<bool> isSymlink(String path) async {
-  try {
-    return FileSystemEntity.typeSync(path, followLinks: false) ==
-        FileSystemEntityType.link;
-  } catch (_) {
-    return false;
-  }
+  return WindowsNativeEngine.verifySymlink(path);
 }
 
 /// Get symlink target path
 Future<String?> getSymlinkTarget(String path) async {
-  try {
-    final link = Link(path);
-    // Do not use Link.existsSync(): it follows the target and returns false
-    // for dangling links, even though the reparse point itself still exists.
-    if (FileSystemEntity.typeSync(path, followLinks: false) ==
-        FileSystemEntityType.link) {
-      return link.targetSync();
-    }
-  } catch (_) {}
-  return null;
+  return WindowsNativeEngine.getSymlinkTarget(path);
 }
 
 /// Normalize path separators for Windows

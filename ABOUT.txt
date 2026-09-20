@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA Symlink Manager
-Version      : 1.0.1
+Version      : 1.1.0
 Tech Stack   : Flutter 3.x / Dart 3.x / Windows Native FFI
 Managed By   : JA Auto Git
 Website      : https://jatechvn.github.io/

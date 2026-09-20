@@ -1,5 +1,5 @@
 // lib/modules/logic/verify_operation.dart
-// VERIFY all ACTIVE symlinks: check actual state and fix the JSON history if needed.
+// Verify ACTIVE and DANGLING links; only repair mismatched history targets.
 
 import 'dart:io';
 import 'package:logging/logging.dart';
@@ -8,12 +8,14 @@ import '../utils.dart';
 
 final _logger = Logger('Logic');
 
-/// Returns list of verification results, one map per active entry.
+/// Returns one result per tracked ACTIVE or DANGLING entry.
 Future<List<Map<String, String>>> performVerifyAndFix(
   SymlinkService service,
 ) async {
   _logger.info('=== VERIFY SYMLINKS ===');
-  final entries = await service.getActiveEntries();
+  final entries = (await service.readAllEntries()).where(
+    (e) => e.isActive || e.status == 'DANGLING',
+  );
   final results = <Map<String, String>>[];
 
   for (final entry in entries) {
@@ -51,6 +53,18 @@ Future<List<Map<String, String>>> performVerifyAndFix(
         'csvTarget': csvTarget,
         'actualTarget': '(cannot read target)',
         'status': 'ERROR',
+      });
+      continue;
+    }
+
+    // Keep potentially disconnected/network-drive I/O off the UI thread.
+    // ignore: avoid_slow_async_io
+    if (!await Directory(actualTarget).exists()) {
+      results.add({
+        'link': linkPath,
+        'csvTarget': csvTarget,
+        'actualTarget': actualTarget,
+        'status': 'DANGLING',
       });
       continue;
     }

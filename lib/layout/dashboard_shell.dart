@@ -6,17 +6,20 @@ import 'package:provider/provider.dart';
 import '../dialogs/glass_change_dialog.dart';
 import '../dialogs/glass_create_dialog.dart';
 import '../dialogs/glass_import_dialog.dart';
+import '../dialogs/process_lock_guard.dart';
 import '../dialogs/glass_remove_dialog.dart';
 import '../dialogs/glass_scan_dialog.dart';
 import '../dialogs/glass_verify_dialog.dart';
+import '../modules/constants.dart' as constants;
 import '../modules/i18n.dart';
 import '../modules/logic.dart';
 import '../modules/symlink_service.dart';
 import '../modules/utils.dart';
-import '../modules/constants.dart' as constants;
 import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
+import '../views/fast_analyzer_view.dart';
 import '../views/overview_view.dart';
+import '../views/relocator_view.dart';
 import '../views/symlink_list_view.dart';
 import '../views/system_tools_view.dart';
 import '../views/user_guide_view.dart';
@@ -34,6 +37,8 @@ class DashboardShell extends StatefulWidget {
   final String appVersion;
   final bool isDebug;
   final String? buildTimestamp;
+  final String? initialSourcePath;
+  final String? initialTargetPath;
 
   const DashboardShell({
     super.key,
@@ -42,6 +47,8 @@ class DashboardShell extends StatefulWidget {
     this.appVersion = constants.appVersion,
     this.isDebug = false,
     this.buildTimestamp,
+    this.initialSourcePath,
+    this.initialTargetPath,
   });
 
   @override
@@ -53,6 +60,7 @@ class _DashboardShellState extends State<DashboardShell> {
   List<SymlinkEntry> _entries = [];
   bool _isLoading = true;
   bool _isAdmin = false;
+  bool _isShellMenuRegistered = false;
   double _progressPercent = 0.0;
   String _progressDetail = '';
 
@@ -62,14 +70,47 @@ class _DashboardShellState extends State<DashboardShell> {
   void initState() {
     super.initState();
     _initialize();
+    widget.logic.healthWatcher.addListener(_onHealthChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.logic.healthWatcher.removeListener(_onHealthChanged);
+    super.dispose();
+  }
+
+  void _onHealthChanged() {
+    if (!mounted) return;
+    _refreshEntries();
+    if (widget.logic.healthWatcher.hasIssues) {
+      showAppToast(
+        context,
+        colors: context.read<ThemeProvider>().colors,
+        message:
+            'Cảnh báo: Phát hiện ${widget.logic.healthWatcher.brokenCount} Symbolic Link bị ngắt kết nối!',
+        icon: Icons.warning_amber_rounded,
+        accentColor: context.read<ThemeProvider>().colors.accentAmber,
+      );
+    }
   }
 
   Future<void> _initialize() async {
     await widget.logic.initialize();
     if (!mounted) return;
     _isAdmin = await widget.logic.isAdmin();
+    _isShellMenuRegistered = await widget.logic.isContextMenuRegistered();
     if (!mounted) return;
     await _refreshEntries();
+
+    if (widget.initialSourcePath != null || widget.initialTargetPath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _createSymlink(
+          initialSource: widget.initialSourcePath,
+          initialTarget: widget.initialTargetPath,
+        );
+      });
+    }
   }
 
   Future<void> _refreshEntries() async {
@@ -77,6 +118,7 @@ class _DashboardShellState extends State<DashboardShell> {
     setState(() => _isLoading = true);
     try {
       _entries = await widget.logic.getAllEntries();
+      widget.logic.calculateStorageSavings(_entries);
     } catch (e) {
       if (mounted) {
         showAppToast(
@@ -92,16 +134,29 @@ class _DashboardShellState extends State<DashboardShell> {
     setState(() => _isLoading = false);
   }
 
-  Future<void> _createSymlink() async {
+  Future<void> _createSymlink({
+    String? initialSource,
+    String? initialTarget,
+  }) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => const GlassCreateDialog(),
+      builder: (_) => GlassCreateDialog(
+        initialSourcePath: initialSource,
+        initialTargetPath: initialTarget,
+      ),
     );
 
     if (result != null && mounted) {
       final s = context.strings;
       final c = context.read<ThemeProvider>().colors;
+      final String sourcePath = result['source'];
+      final String targetPath = result['target'];
+      final bool moveData = result['moveData'] ?? true;
 
+      // Smart Process Lock Detection: Check if files in source are locked
+      if (!await confirmProcessLocks(context, widget.logic, sourcePath)) return;
+
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
         _progressPercent = 0.0;
@@ -109,10 +164,11 @@ class _DashboardShellState extends State<DashboardShell> {
       });
 
       final opResult = await widget.logic.createSymlink(
-        sourcePath: result['source'],
-        targetPath: result['target'],
-        moveData: result['moveData'],
-        killProcesses: result['killProcesses'],
+        sourcePath: sourcePath,
+        targetPath: targetPath,
+        moveData: moveData,
+        // Only the explicitly approved PID list above may be terminated.
+        killProcesses: false,
         onProgress: (percent, fileName, sizeInfo) {
           if (!mounted) return;
           setState(() {
@@ -170,6 +226,18 @@ class _DashboardShellState extends State<DashboardShell> {
     );
 
     if (result != null && mounted) {
+      final bool moveData = result['moveData'] ?? false;
+
+      if (moveData) {
+        if (!await confirmProcessLocks(
+          context,
+          widget.logic,
+          entry.targetPath,
+        )) {
+          return;
+        }
+      }
+
       setState(() {
         _isLoading = true;
         _progressPercent = 0.0;
@@ -179,7 +247,7 @@ class _DashboardShellState extends State<DashboardShell> {
       final opResult = await widget.logic.changeSymlink(
         linkPath: entry.linkPath,
         newTargetPath: result['newTarget'],
-        moveData: result['moveData'],
+        moveData: moveData,
         onProgress: (percent, fileName, sizeInfo) {
           if (!mounted) return;
           setState(() {
@@ -427,6 +495,225 @@ class _DashboardShellState extends State<DashboardShell> {
     }
   }
 
+  Future<void> _exportBatchScript() async {
+    final s = context.strings;
+    final c = context.read<ThemeProvider>().colors;
+    final timestamp = formatTimestampFileName();
+
+    String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: s.btnExportScript,
+      fileName: 'restore_symlinks_$timestamp.bat',
+      type: FileType.custom,
+      allowedExtensions: ['bat'],
+    );
+
+    if (outputFile != null && mounted) {
+      try {
+        setState(() => _isLoading = true);
+        final script = await widget.logic.generateRestoreBatchScript();
+        final file = File(outputFile);
+        await file.writeAsString(script);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        showAppToast(
+          context,
+          colors: c,
+          message: s.msgExportScriptSuccess,
+          icon: Icons.check_circle_rounded,
+          accentColor: c.accentEmerald,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        showAppToast(
+          context,
+          colors: c,
+          message: e.toString(),
+          icon: Icons.error_outline_rounded,
+          accentColor: c.accentRose,
+        );
+      }
+    }
+  }
+
+  Future<void> _exportPowerShellScript() async {
+    final s = context.strings;
+    final c = context.read<ThemeProvider>().colors;
+    final timestamp = formatTimestampFileName();
+
+    String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: s.btnExportPsScript,
+      fileName: 'restore_symlinks_$timestamp.ps1',
+      type: FileType.custom,
+      allowedExtensions: ['ps1'],
+    );
+
+    if (outputFile != null && mounted) {
+      try {
+        setState(() => _isLoading = true);
+        final script = await widget.logic.generateRestorePowerShellScript();
+        final file = File(outputFile);
+        await file.writeAsString(script);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        showAppToast(
+          context,
+          colors: c,
+          message: s.msgExportScriptSuccess,
+          icon: Icons.check_circle_rounded,
+          accentColor: c.accentEmerald,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        showAppToast(
+          context,
+          colors: c,
+          message: e.toString(),
+          icon: Icons.error_outline_rounded,
+          accentColor: c.accentRose,
+        );
+      }
+    }
+  }
+
+  Future<void> _exportSnapshot() async {
+    final s = context.strings;
+    final c = context.read<ThemeProvider>().colors;
+    final timestamp = formatTimestampFileName();
+
+    String? outputFile = await FilePicker.platform.saveFile(
+      dialogTitle: s.btnExportSnapshot,
+      fileName: 'ja_symlink_snapshot_$timestamp.json',
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (outputFile != null && mounted) {
+      try {
+        setState(() => _isLoading = true);
+        await widget.logic.exportSnapshot(outputFile);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        showAppToast(
+          context,
+          colors: c,
+          message: s.msgSnapshotExportSuccess,
+          icon: Icons.check_circle_rounded,
+          accentColor: c.accentEmerald,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        showAppToast(
+          context,
+          colors: c,
+          message: e.toString(),
+          icon: Icons.error_outline_rounded,
+          accentColor: c.accentRose,
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreSnapshot() async {
+    final s = context.strings;
+    final c = context.read<ThemeProvider>().colors;
+
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      dialogTitle: s.btnRestoreSnapshot,
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+
+    if (result != null && result.files.single.path != null && mounted) {
+      final filePath = result.files.single.path!;
+      setState(() => _isLoading = true);
+
+      try {
+        final res = await widget.logic.restoreSnapshot(filePath);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        await _refreshEntries();
+
+        if (!mounted) return;
+        showAppToast(
+          context,
+          colors: c,
+          message: s.snapshotRestoreSummaryMsg(
+            res.restored,
+            res.skipped,
+            res.failed,
+          ),
+          icon: res.failed == 0
+              ? Icons.check_circle_rounded
+              : Icons.warning_amber_rounded,
+          accentColor: res.failed == 0 ? c.accentEmerald : c.accentAmber,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        showAppToast(
+          context,
+          colors: c,
+          message: e.toString(),
+          icon: Icons.error_outline_rounded,
+          accentColor: c.accentRose,
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleShellContextMenu() async {
+    final s = context.strings;
+    final c = context.read<ThemeProvider>().colors;
+
+    setState(() => _isLoading = true);
+    if (_isShellMenuRegistered) {
+      final ok = await widget.logic.unregisterContextMenu();
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (ok) _isShellMenuRegistered = false;
+      });
+      showAppToast(
+        context,
+        colors: c,
+        message: ok
+            ? s.msgShellUnregisterSuccess
+            : 'Không thể gỡ bỏ menu chuột phải',
+        icon: ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+        accentColor: ok ? c.accentEmerald : c.accentRose,
+      );
+    } else {
+      final ok = await widget.logic.registerContextMenu(
+        label: s.shellMenuLabelSource,
+        bgLabel: s.shellMenuLabelTarget,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (ok) _isShellMenuRegistered = true;
+      });
+      showAppToast(
+        context,
+        colors: c,
+        message: ok
+            ? s.msgShellRegisterSuccess
+            : 'Không thể cài đặt menu chuột phải',
+        icon: ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+        accentColor: ok ? c.accentEmerald : c.accentRose,
+      );
+    }
+  }
+
   List<CommandPaletteItem> _buildPaletteItems() {
     final s = context.strings;
     final theme = context.read<ThemeProvider>();
@@ -438,6 +725,14 @@ class _DashboardShellState extends State<DashboardShell> {
         subtitle: s.dlgCreateDesc,
         icon: Icons.add_link_rounded,
         onSelect: _createSymlink,
+      ),
+      CommandPaletteItem(
+        label: _isShellMenuRegistered
+            ? s.btnUnregisterShellMenu
+            : s.btnRegisterShellMenu,
+        subtitle: s.shellContextMenuDesc,
+        icon: Icons.mouse_rounded,
+        onSelect: _toggleShellContextMenu,
       ),
       CommandPaletteItem(
         label: s.menuScan,
@@ -464,6 +759,30 @@ class _DashboardShellState extends State<DashboardShell> {
         onSelect: _importSymlinks,
       ),
       CommandPaletteItem(
+        label: s.btnExportScript,
+        subtitle: s.survivalKitDesc,
+        icon: Icons.terminal_rounded,
+        onSelect: _exportBatchScript,
+      ),
+      CommandPaletteItem(
+        label: s.btnExportPsScript,
+        subtitle: s.survivalKitDesc,
+        icon: Icons.integration_instructions_rounded,
+        onSelect: _exportPowerShellScript,
+      ),
+      CommandPaletteItem(
+        label: s.btnExportSnapshot,
+        subtitle: s.survivalKitDesc,
+        icon: Icons.save_as_rounded,
+        onSelect: _exportSnapshot,
+      ),
+      CommandPaletteItem(
+        label: s.btnRestoreSnapshot,
+        subtitle: s.survivalKitDesc,
+        icon: Icons.settings_backup_restore_rounded,
+        onSelect: _restoreSnapshot,
+      ),
+      CommandPaletteItem(
         label: s.paletteTheme,
         subtitle: s.paletteThemeDesc,
         icon: Icons.palette_rounded,
@@ -482,24 +801,48 @@ class _DashboardShellState extends State<DashboardShell> {
         onSelect: () => lang.cycleNext(),
       ),
       CommandPaletteItem(
+        label: s.driveRefreshTooltip,
+        subtitle: s.driveSpaceSubtitle,
+        icon: Icons.storage_rounded,
+        onSelect: () => widget.logic.getDriveSpaces(forceRefresh: true),
+      ),
+      CommandPaletteItem(
+        label: s.storageSavingsTitle,
+        subtitle: s.storageSavingsSubtitle,
+        icon: Icons.savings_rounded,
+        onSelect: () =>
+            widget.logic.calculateStorageSavings(_entries, forceRefresh: true),
+      ),
+      CommandPaletteItem(
         label: s.openTab(s.navOverview),
         icon: Icons.dashboard_rounded,
         onSelect: () => setState(() => _currentIndex = 0),
       ),
       CommandPaletteItem(
+        label: s.openTab(s.navRelocator),
+        icon: Icons.auto_awesome_rounded,
+        onSelect: () => setState(() => _currentIndex = 1),
+      ),
+      CommandPaletteItem(
         label: s.openTab(s.navSymlinks),
         icon: Icons.link_rounded,
-        onSelect: () => setState(() => _currentIndex = 1),
+        onSelect: () => setState(() => _currentIndex = 2),
+      ),
+      CommandPaletteItem(
+        label: s.openTab(s.navFastScan),
+        subtitle: s.fastScanSubtitle,
+        icon: Icons.bolt_rounded,
+        onSelect: () => setState(() => _currentIndex = 3),
       ),
       CommandPaletteItem(
         label: s.openTab(s.navTools),
         icon: Icons.build_circle_rounded,
-        onSelect: () => setState(() => _currentIndex = 2),
+        onSelect: () => setState(() => _currentIndex = 4),
       ),
       CommandPaletteItem(
         label: s.openTab(s.navGuide),
         icon: Icons.menu_book_rounded,
-        onSelect: () => setState(() => _currentIndex = 3),
+        onSelect: () => setState(() => _currentIndex = 5),
       ),
     ];
   }
@@ -509,6 +852,7 @@ class _DashboardShellState extends State<DashboardShell> {
     final theme = context.watch<ThemeProvider>();
     final colors = theme.colors;
     final isMobile = MediaQuery.of(context).size.width < _mobileBreakpoint;
+    final s = context.strings;
 
     return CommandPaletteShortcut(
       items: _buildPaletteItems,
@@ -614,10 +958,19 @@ class _DashboardShellState extends State<DashboardShell> {
                 child: MobileDockNav(
                   colors: colors,
                   currentIndex: _currentIndex,
-                  tabs: [s.navOverview, s.navSymlinks, s.navTools, s.navGuide],
+                  tabs: [
+                    s.navOverview,
+                    s.navRelocator,
+                    s.navSymlinks,
+                    s.navFastScan,
+                    s.navTools,
+                    s.navGuide,
+                  ],
                   icons: const [
                     Icons.dashboard_rounded,
+                    Icons.auto_awesome_rounded,
                     Icons.link_rounded,
+                    Icons.bolt_rounded,
                     Icons.build_circle_rounded,
                     Icons.menu_book_rounded,
                   ],
@@ -649,8 +1002,15 @@ class _DashboardShellState extends State<DashboardShell> {
           onScan: _scanSystem,
           onVerify: _verifySymlinks,
           onSelectTab: (idx) => setState(() => _currentIndex = idx),
+          logic: widget.logic,
         );
       case 1:
+        return RelocatorView(
+          key: const ValueKey('Relocator'),
+          logic: widget.logic,
+          onRefreshSymlinks: _refreshEntries,
+        );
+      case 2:
         return SymlinkListView(
           key: const ValueKey('Symlinks'),
           entries: _entries,
@@ -658,16 +1018,29 @@ class _DashboardShellState extends State<DashboardShell> {
           onChange: _changeSymlink,
           onRemove: _removeSymlink,
           onRefresh: _refreshEntries,
+          logic: widget.logic,
         );
-      case 2:
+      case 3:
+        return FastAnalyzerView(
+          key: const ValueKey('FastScan'),
+          logic: widget.logic,
+          onRefreshSymlinks: _refreshEntries,
+        );
+      case 4:
         return SystemToolsView(
           key: const ValueKey('Tools'),
           onScan: _scanSystem,
           onVerify: _verifySymlinks,
           onImport: _importSymlinks,
           onExport: _exportSymlinks,
+          onExportBatchScript: _exportBatchScript,
+          onExportPowerShellScript: _exportPowerShellScript,
+          onExportSnapshot: _exportSnapshot,
+          onRestoreSnapshot: _restoreSnapshot,
+          isShellMenuRegistered: _isShellMenuRegistered,
+          onToggleShellMenu: _toggleShellContextMenu,
         );
-      case 3:
+      case 5:
         return const UserGuideView(key: ValueKey('Guide'));
       default:
         return const SizedBox.shrink();
@@ -684,12 +1057,21 @@ class _DashboardShellState extends State<DashboardShell> {
     final lang = context.watch<LanguageNotifier>();
     final activeCount = _entries.where((e) => e.isActive).length;
     final timestamp = widget.buildTimestamp ?? _getFallbackBuildTimestamp();
-    final isCompact = MediaQuery.of(context).size.width < 1220;
+    final isCompact = MediaQuery.of(context).size.width < 1360;
 
-    final tabLabels = [s.navOverview, s.navSymlinks, s.navTools, s.navGuide];
+    final tabLabels = [
+      s.navOverview,
+      s.navRelocator,
+      s.navSymlinks,
+      s.navFastScan,
+      s.navTools,
+      s.navGuide,
+    ];
     final tabIcons = [
       Icons.dashboard_rounded,
+      Icons.auto_awesome_rounded,
       Icons.link_rounded,
+      Icons.bolt_rounded,
       Icons.build_circle_rounded,
       Icons.menu_book_rounded,
     ];
@@ -828,7 +1210,9 @@ class _DashboardShellState extends State<DashboardShell> {
             colors: colors,
             isRunning: activeCount > 0,
             statusText: s.activeBadge(activeCount),
-            subText: _isAdmin ? s.labelAdmin.toUpperCase() : s.standardShort,
+            subText: isCompact
+                ? null
+                : (_isAdmin ? s.labelAdmin.toUpperCase() : s.standardShort),
             onTap: () => setState(() => _currentIndex = 1),
           ),
 
