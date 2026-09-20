@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../modules/i18n.dart';
+import '../modules/logic/symlink_logic.dart';
 import '../modules/symlink_service.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/empty_state_card.dart';
 import '../widgets/filter_search_dock.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_widgets.dart';
+import '../widgets/quick_copy_button.dart';
 
 class SymlinkListView extends StatefulWidget {
   final List<SymlinkEntry> entries;
@@ -14,6 +16,7 @@ class SymlinkListView extends StatefulWidget {
   final ValueChanged<SymlinkEntry> onChange;
   final ValueChanged<SymlinkEntry> onRemove;
   final VoidCallback onRefresh;
+  final SymlinkLogic? logic;
 
   const SymlinkListView({
     super.key,
@@ -22,6 +25,7 @@ class SymlinkListView extends StatefulWidget {
     required this.onChange,
     required this.onRemove,
     required this.onRefresh,
+    this.logic,
   });
 
   @override
@@ -66,6 +70,10 @@ class _SymlinkListViewState extends State<SymlinkListView> {
     if (entry.status == 'CHANGED') badgeColor = c.accentAmber;
     if (entry.status == 'REMOVED') badgeColor = c.accentRose;
 
+    final stat = widget.logic?.storageService.getStatForTarget(
+      entry.targetPath,
+    );
+
     showDialog(
       context: context,
       builder: (_) => DetailDialog(
@@ -79,6 +87,14 @@ class _SymlinkListViewState extends State<SymlinkListView> {
             border: badgeColor.withValues(alpha: 0.35),
             showDot: true,
           ),
+          if (stat != null && stat.sizeBytes > 0)
+            PillBadge(
+              label: stat.formattedSize,
+              color: c.accentCyan,
+              bg: c.accentCyan.withValues(alpha: 0.12),
+              border: c.accentCyan.withValues(alpha: 0.35),
+              icon: Icons.folder_zip_rounded,
+            ),
           if (entry.hasBackup)
             PillBadge(
               label: s.hasBackup,
@@ -94,6 +110,8 @@ class _SymlinkListViewState extends State<SymlinkListView> {
         tags: [
           '${s.sourceLabel}: ${entry.linkPath}',
           '${s.targetLabel}: ${entry.targetPath}',
+          if (stat != null && stat.sizeBytes > 0)
+            '${s.storageOffloaded}: ${stat.formattedSize} (${s.totalOffloadedFiles(stat.fileCount)})',
           if (entry.hasBackup) '${s.backupLabel}: ${entry.backupPath}',
         ],
         actions: [
@@ -210,45 +228,28 @@ class _SymlinkListViewState extends State<SymlinkListView> {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: BentoCard(
-                    colors: colors,
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.link_off_rounded,
-                          size: 48,
-                          color: colors.textMuted.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          s.emptyTitle,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.emptySubtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        GlowingActionButton(
-                          height: 38,
+                  child: widget.entries.isEmpty
+                      ? EmptyStateCard(
+                          icon: Icons.link_off_rounded,
+                          title: s.emptySymlinksTitle,
+                          description: s.emptySymlinksDesc,
+                          buttonLabel: s.btnCreate.toUpperCase(),
+                          onAction: widget.onCreate,
                           colors: colors,
-                          icon: Icons.add_link_rounded,
-                          label: s.btnCreate,
-                          onPressed: widget.onCreate,
+                        )
+                      : EmptyStateCard(
+                          icon: Icons.search_off_rounded,
+                          title: s.emptySearchResultsTitle,
+                          description: s.emptySearchResultsDesc,
+                          buttonLabel: s.btnResetFilter,
+                          onAction: () => setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                            _selectedFilter = 'ALL';
+                          }),
+                          colors: colors,
+                          accentColor: colors.accentAmber,
                         ),
-                      ],
-                    ),
-                  ),
                 )
               : ListView.separated(
                   physics: const BouncingScrollPhysics(),
@@ -329,6 +330,34 @@ class _SymlinkListViewState extends State<SymlinkListView> {
                                       showDot: isFeatured,
                                       fontSize: 10,
                                     ),
+                                    if (widget.logic != null) ...[
+                                      () {
+                                        final stat = widget
+                                            .logic!
+                                            .storageService
+                                            .getStatForTarget(entry.targetPath);
+                                        if (stat != null &&
+                                            stat.sizeBytes > 0) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 6,
+                                            ),
+                                            child: PillBadge(
+                                              label: stat.formattedSize,
+                                              color: colors.accentCyan,
+                                              bg: colors.accentCyan.withValues(
+                                                alpha: 0.12,
+                                              ),
+                                              border: colors.accentCyan
+                                                  .withValues(alpha: 0.35),
+                                              icon: Icons.folder_zip_rounded,
+                                              fontSize: 10,
+                                            ),
+                                          );
+                                        }
+                                        return const SizedBox.shrink();
+                                      }(),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 4),
@@ -388,29 +417,9 @@ class _SymlinkListViewState extends State<SymlinkListView> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Tooltip(
-                                message: s.copyPath,
-                                child: InkWell(
-                                  onTap: () => Clipboard.setData(
-                                    ClipboardData(text: entry.linkPath),
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(7),
-                                    decoration: BoxDecoration(
-                                      color: colors.subCardBg,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: colors.subCardBorder,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.copy_rounded,
-                                      size: 14,
-                                      color: colors.textSecondary,
-                                    ),
-                                  ),
-                                ),
+                              QuickCopyButton(
+                                textToCopy: entry.linkPath,
+                                colors: colors,
                               ),
                               if (entry.isActive) ...[
                                 const SizedBox(width: 6),

@@ -27,6 +27,17 @@ void main(List<String> args) async {
     BuildInfo.isCliDebug = true;
   }
 
+  String? initialSource;
+  String? initialTarget;
+  for (int i = 0; i < args.length; i++) {
+    final arg = args[i];
+    if ((arg == '--source' || arg == '-s') && i + 1 < args.length) {
+      initialSource = args[i + 1];
+    } else if ((arg == '--target' || arg == '-t') && i + 1 < args.length) {
+      initialTarget = args[i + 1];
+    }
+  }
+
   // Initialize logger
   setupLogger();
 
@@ -116,15 +127,26 @@ void main(List<String> args) async {
         ),
         ChangeNotifierProvider(create: (_) => LanguageNotifier(savedLang)),
       ],
-      child: JaSymlinkApp(logic: symlinkLogic),
+      child: JaSymlinkApp(
+        logic: symlinkLogic,
+        initialSourcePath: initialSource,
+        initialTargetPath: initialTarget,
+      ),
     ),
   );
 }
 
 class JaSymlinkApp extends StatelessWidget {
   final SymlinkLogic logic;
+  final String? initialSourcePath;
+  final String? initialTargetPath;
 
-  const JaSymlinkApp({super.key, required this.logic});
+  const JaSymlinkApp({
+    super.key,
+    required this.logic,
+    this.initialSourcePath,
+    this.initialTargetPath,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +170,8 @@ class JaSymlinkApp extends StatelessWidget {
           appVersion: appVersion,
           isDebug: BuildInfo.isDebug,
           buildTimestamp: BuildInfo.debugTimestamp,
+          initialSourcePath: initialSourcePath,
+          initialTargetPath: initialTargetPath,
         ),
       ),
     );

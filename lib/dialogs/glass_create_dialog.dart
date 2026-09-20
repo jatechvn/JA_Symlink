@@ -9,17 +9,35 @@ import '../widgets/glass_widgets.dart';
 import 'preview_box.dart';
 
 class GlassCreateDialog extends StatefulWidget {
-  const GlassCreateDialog({super.key});
+  final String? initialSourcePath;
+  final String? initialTargetPath;
+
+  const GlassCreateDialog({
+    super.key,
+    this.initialSourcePath,
+    this.initialTargetPath,
+  });
 
   @override
   State<GlassCreateDialog> createState() => _GlassCreateDialogState();
 }
 
 class _GlassCreateDialogState extends State<GlassCreateDialog> {
-  final _sourceController = TextEditingController();
-  final _targetController = TextEditingController();
+  late final TextEditingController _sourceController;
+  late final TextEditingController _targetController;
   bool _moveData = true;
   bool _killProcesses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _sourceController = TextEditingController(
+      text: widget.initialSourcePath ?? '',
+    );
+    _targetController = TextEditingController(
+      text: widget.initialTargetPath ?? '',
+    );
+  }
 
   @override
   void dispose() {

@@ -3,7 +3,7 @@
 
 const String appId = 'com.jatech.ja_symlink';
 const String appName = 'JA Symlink Manager';
-const String appVersion = '1.0.1';
+const String appVersion = '1.1.0';
 
 // CSV Configuration
 const String csvDelimiter = '|';

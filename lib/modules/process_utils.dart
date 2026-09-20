@@ -25,6 +25,7 @@ const String _lockingProcessesScript = r'''
 $ErrorActionPreference = 'SilentlyContinue'
 $path = $env:JA_SYMLINK_LOCK_PATH
 if ([string]::IsNullOrWhiteSpace($path)) { return }
+$path = [System.IO.Path]::GetFullPath($path).TrimEnd('\', '/') + '\'
 $pattern = [System.Management.Automation.WildcardPattern]::Escape($path) + '*'
 Get-Process | Where-Object {
   $_.Modules | Where-Object { $_.FileName -like $pattern }
